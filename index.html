@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemorySnap | Monochrome Photo Booth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+    body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #222;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .btn-primary {
+            background-color: #222;
+            color: white;
+            transition: all 0.3s ease;
+            border: 1px solid #222;
+        }
+        
+        .btn-primary:hover {
+            background-color: transparent;
+            color: #000000;
+        }
+        
+        .btn-outline {
+            border: 1px solid #222;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline:hover {
+            background-color: #000000;
+            color: white;
+        }
+        
+        .camera-view {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #e5e5e5;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            transition: all 0.3s ease;
+            border: 1px solid #252525;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .photo-strip-container {
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #888 #f1f1f1;
+        }
+        
+        .photo-strip-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .photo-strip-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .photo-strip-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .photo-strip-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        .photo-strip {
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e5e5e5;
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+            100% {
+                transform: translateY(0px);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        footer {
+            background-color: #222;
+            color: white;
+            padding: 2rem 0;
+            margin-top: auto;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .footer-links a {
+            color: white;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-links a:hover {
+            color: #ccc;
+        }
+        
+        .social-icons a {
+            color: white;
+            transition: color 0.3s ease;
+        }
+        
+        .social-icons a:hover {
+            color: #aaa;
+        }
+
+        /* Fixed camera container positioning */
+       #camera-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 15, 15, 0.98);
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* Important: align children to top with spacing */
+  padding-top: 2rem; /* Add space from the top */
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 1rem;
+  overflow-y: auto;
+}
+
+        .camera-content {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .camera-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: #e5e5e5;
+            width: 100%;
+            margin: 2rem 0;
+        }
+        
+        .feature-card {
+            border: 1px solid #e5e5e5;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .testimonial-card {
+            border: 1px solid #e5e5e5;
+        }
+
+        video {
+  transform: scaleX(-1);
+}
+#camera {
+  transform: scaleX(-1);
+}
+    </style>
+</head>
+<body>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Hero Section -->
+        <div class="min-h-screen flex flex-col items-center justify-center px-4 text-center py-16">
+            <div class="max-w-4xl mx-auto">
+                <div class="floating mb-8">
+                    <div class="inline-block p-6 bg-white rounded-full shadow-md border border-gray-200">
+                        <i class="fas fa-camera text-5xl"></i>
+                    </div>
+                </div>
+                
+                <h1 class="text-5xl md:text-6xl font-bold mb-6">
+                    <span class="text-black">MemorySnap</span>
+                </h1>
+                
+                <p class="text-xl md:text-2xl text-gray-600 mb-10 max-w-2xl mx-auto">
+                    Where memories meet monochrome.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button id="start-camera" class="btn-primary font-semibold py-4 px-8 rounded-full text-lg">
+                        <i class="fas fa-camera mr-2"></i> Start Snapping
+                    </button>
+                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+  <button class="btn-outline font-semibold py-4 px-8 rounded-full text-lg">
+    <i class="fas fa-info-circle mr-2"></i> Learn More
+  </button>
+</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <section class="py-20 bg-white">
+            <div class="max-w-6xl mx-auto px-4">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
+                    <span class="text-black">Minimalist Features</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="feature-card bg-white p-8 rounded-xl">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                            <i class="fas fa-sliders-h text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Monochrome Filters</h3>
+                        <p class="text-gray-600">Choose from a variety of black & white filters to create classic, timeless photos.</p>
+                    </div>
+                    
+                    <div class="feature-card bg-white p-8 rounded-xl">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                            <i class="fas fa-stopwatch text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Custom Countdown</h3>
+                        <p class="text-gray-600">Set your preferred countdown timer to get ready for the perfect shot.</p>
+                    </div>
+                    
+                    <div class="feature-card bg-white p-8 rounded-xl">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                            <i class="fas fa-border-style text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Photo Strips</h3>
+                        <p class="text-gray-600">Create beautiful photo strips that you can download and share.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="divider"></div>
+
+        <!-- Testimonials Section -->
+        <section class="py-20 bg-white">
+            <div class="max-w-6xl mx-auto px-4">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
+                    <span class="text-black">What People Say</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="testimonial-card bg-white p-8 rounded-xl">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-full bg-gray-200 mr-4 flex items-center justify-center">
+                                <i class="fas fa-user text-xl text-gray-500"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Anna Mae Pal</h4>
+                                <div class="flex text-gray-400">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-gray-600">"The monochrome aesthetic creates such elegant photos. Perfect for our wedding!"</p>
+                    </div>
+                    
+                    <div class="testimonial-card bg-white p-8 rounded-xl">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-full bg-gray-200 mr-4 flex items-center justify-center">
+                                <i class="fas fa-user text-xl text-gray-500"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Michael T.</h4>
+                                <div class="flex text-gray-400">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-gray-600">"Love the minimalist interface and classic black & white results."</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Camera Container (hidden by default) -->
+        <div id="camera-container" class="fixed inset-0 bg-gray-950 z-50 flex flex-col items-center justify-center p-4 overflow-y-auto" style="display: none;">
+            <div class="camera-content">
+                <div class="camera-header">
+                    <h2 class="text-2xl font-bold text-white">
+                        <i class="fas fa-camera mr-2"></i> MemorySnap Studio
+                    </h2>
+                    <button id="close-camera" class="text-white hover:text-gray-300 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="camera-view relative overflow-hidden rounded-lg bg-black">
+                    <video id="video" autoplay class="w-full h-auto max-h-[60vh] mx-auto"></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    
+                    <!-- Countdown overlay -->
+                    <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 hidden">
+                        <span id="countdown-text" class="text-white text-9xl font-bold">3</span>
+                    </div>
+                </div>
+                
+                <div class="camera-controls">
+                    <div class="bg-white/10 backdrop-blur-md rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-white font-medium mb-2">Filter Effects</label>
+                                <select id="filter-select" class="w-full p-3 rounded-lg bg-white/10 text-white border border-white/20">
+                                    <option value="none" class="text-gray-800">No Filter</option>
+                                    <option value="grayscale" class="text-gray-800">Classic B&W</option>
+                                    <option value="sepia" class="text-gray-800">Sepia Tone</option>
+                                    <option value="invert" class="text-gray-800">Inverted</option>
+                                    <option value="high-contrast" class="text-gray-800">High Contrast</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-white font-medium mb-2">Countdown Timer</label>
+                                <div class="flex items-center">
+                                    <input type="range" id="countdown-input" min="3" max="10" value="3" class="flex-1 mr-4">
+                                    <span id="countdown-value" class="text-white font-bold w-8 text-center">3s</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls-row">
+                        <div class="control-group">
+                            <button id="add-caption" class="control-btn bg-transparent text-white rounded-full flex items-center justify-center">
+                                <i class="fas fa-pen text-xl"></i>
+                            </button>
+                            <span class="text-white text-sm">Caption</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <button id="capture" class="control-btn bg-white text-black rounded-full flex items-center justify-center">
+                                <i class="fas fa-camera text-2xl"></i>
+                            </button>
+                            <span class="text-white text-sm">Capture</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <button id="download" class="control-btn bg-transparent text-white rounded-full flex items-center justify-center" style="display: none;">
+                                <i class="fas fa-download text-xl"></i>
+                            </button>
+                            <span class="text-white text-sm">Download</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <button id="reset" class="control-btn bg-transparent text-white rounded-full flex items-center justify-center">
+                                <i class="fas fa-sync-alt text-xl"></i>
+                            </button>
+                            <span class="text-white text-sm">Reset</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white/10 backdrop-blur-md rounded-lg p-4">
+                    <h3 class="text-white font-medium mb-3">Your Photo Strip</h3>
+                    <div class="photo-strip-container">
+                        <div class="photo-strip p-4">
+                            <canvas id="photo-strip" class="w-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Caption Modal -->
+        <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center hidden">
+            <div class="modal-content bg-white rounded-lg p-6 w-full max-w-md">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-pen mr-2"></i> Add Your Caption
+                </h2>
+                <input type="text" id="caption-input" placeholder="Enter your caption..." class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-1 focus:ring-gray-500">
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-caption" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition">
+                        Cancel
+                    </button>
+                    <button id="save-caption" class="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900 transition">
+                        Save Caption
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Develop By Joshua C. Godilos</h3>
+                    <p class="text-gray-300">Timeless monochrome photo booth experience.</p>
+                </div>
+                <div class="footer-links">
+                    <h3 class="text-xl font-bold mb-4">Contact</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="block">Home</a></li>
+                        <li><a href="#" class="block">About</a></li>
+                        <li><a href="#" class="block">Features</a></li>
+                        <li><a href="#" class="block">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Connect</h3>
+                    <div class="social-icons flex space-x-4">
+                        <a href="#" class="text-2xl"><i class="fab fa-instagram"></i></a>
+                        <a href="https://www.facebook.com/prometheusmalboro" class="text-2xl"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-2xl"><i class="fab fa-reddit"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2025 MemorySnap. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Elements
+        const startCameraBtn = document.getElementById('start-camera');
+        const cameraContainer = document.getElementById('camera-container');
+        const videoElement = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const photoStrip = document.getElementById('photo-strip');
+        const stripContext = photoStrip.getContext('2d');
+        const closeCameraBtn = document.getElementById('close-camera');
+
+        const filterSelect = document.getElementById('filter-select');
+        const countdownInput = document.getElementById('countdown-input');
+        const countdownValue = document.getElementById('countdown-value');
+        const countdownOverlay = document.getElementById('countdown-overlay');
+        const countdownText = document.getElementById('countdown-text');
+
+        const addCaptionBtn = document.getElementById('add-caption');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const saveCaptionBtn = document.getElementById('save-caption');
+        const cancelCaptionBtn = document.getElementById('cancel-caption');
+        const captionInput = document.getElementById('caption-input');
+
+        const downloadBtn = document.getElementById('download');
+        const resetBtn = document.getElementById('reset');
+        const captureBtn = document.getElementById('capture');
+
+        let userCaption = '';
+        let photos = [];
+        let countdownInterval;
+
+        // Update countdown value display
+        countdownInput.addEventListener('input', () => {
+            countdownValue.textContent = `${countdownInput.value}s`;
+        });
+
+        // Open Camera
+        startCameraBtn.addEventListener('click', async () => {
+            // Add animation to button
+            startCameraBtn.classList.add('animate-pulse');
+            
+            // Show loading state
+            startCameraBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Loading Camera...';
+            
+            cameraContainer.style.display = 'flex';
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                videoElement.srcObject = stream;
+                startCameraBtn.innerHTML = '<i class="fas fa-camera mr-2"></i> Start Snapping';
+                startCameraBtn.classList.remove('animate-pulse');
+                
+                // Play camera sound
+                const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-1133.mp3');
+                audio.volume = 0.3;
+                audio.play();
+                
+            } catch (error) {
+                alert('Camera access denied or unavailable.');
+                startCameraBtn.innerHTML = '<i class="fas fa-camera mr-2"></i> Start Snapping';
+                startCameraBtn.classList.remove('animate-pulse');
+                 startCameraBtn.classList.remove('pulse');
+                
+            }
+        });
+
+        // Show Caption Modal
+        addCaptionBtn.addEventListener('click', () => {
+            captionInput.value = userCaption;
+            modalOverlay.classList.remove('hidden');
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3');
+            audio.volume = 0.3;
+            audio.play();
+        });
+
+        // Save Caption
+        saveCaptionBtn.addEventListener('click', () => {
+            userCaption = captionInput.value.trim();
+            
+            // Show notification
+            showNotification(`Caption added: "${userCaption}"`);
+            
+            modalOverlay.classList.add('hidden');
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3');
+            audio.volume = 0.3;
+            audio.play();
+        });
+
+        // Cancel Caption
+        cancelCaptionBtn.addEventListener('click', () => {
+            modalOverlay.classList.add('hidden');
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-close-erase-1178.mp3');
+            audio.volume = 0.3;
+            audio.play();
+        });
+
+        // Apply Filter
+        filterSelect.addEventListener('change', () => {
+            videoElement.style.filter = getFilterStyle(filterSelect.value);
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-modern-click-box-check-1120.mp3');
+            audio.volume = 0.2;
+            audio.play();
+        });
+
+        // Capture Photo with Countdown
+        captureBtn.addEventListener('click', () => {
+            const countdownValue = parseInt(countdownInput.value) || 3;
+            
+            // Disable button during countdown
+            captureBtn.disabled = true;
+            
+            // Show countdown overlay
+            countdownOverlay.classList.remove('hidden');
+            countdownText.textContent = countdownValue;
+            
+            let countdownTimer = countdownValue;
+            
+            // Play countdown sound
+            const countdownAudio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-game-countdown-921.mp3');
+            countdownAudio.volume = 0.3;
+            countdownAudio.play();
+            
+            countdownInterval = setInterval(() => {
+                countdownTimer--;
+                countdownText.textContent = countdownTimer;
+                
+                if (countdownTimer < 0) {
+                    clearInterval(countdownInterval);
+                    
+                    // Capture Image
+                    const date = new Date().toLocaleDateString();
+                    canvas.width = videoElement.videoWidth;
+                    canvas.height = videoElement.videoHeight;
+                    
+                    context.filter = getFilterStyle(filterSelect.value);
+                    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                    
+                    // Play shutter sound
+                    const shutterAudio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-camera-shutter-click-1133.mp3');
+                    shutterAudio.volume = 0.5;
+                    shutterAudio.play();
+                    
+                    // Add flash effect
+                    cameraContainer.style.backgroundColor = 'white';
+                    setTimeout(() => {
+                        cameraContainer.style.backgroundColor = 'rgb(15 15 15)';
+                    }, 100);
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    photos.push({ imgData, caption: userCaption, date });
+                    
+                    displayPhotoStrip();
+                    
+                    if (photos.length >= 1) {
+                        downloadBtn.style.display = 'flex';
+                    }
+                    
+                    // Re-enable button
+                    captureBtn.disabled = false;
+                    
+                    // Hide countdown overlay
+                    countdownOverlay.classList.add('hidden');
+                }
+            }, 1000);
+        });
+
+        // Display Photo Strip
+        function displayPhotoStrip() {
+            const photoHeightWithText = canvas.height + 60;
+            
+            photoStrip.width = canvas.width;
+            photoStrip.height = photoHeightWithText * photos.length;
+            
+            // Draw polaroid-style background for each photo
+            photos.forEach((photo, index) => {
+                const img = new Image();
+                img.src = photo.imgData;
+                img.onload = () => {
+                    // Draw polaroid background
+                    stripContext.fillStyle = 'white';
+                    stripContext.fillRect(0, photoHeightWithText * index, canvas.width, photoHeightWithText);
+                    
+                    // Add shadow effect
+                    stripContext.shadowColor = 'rgba(0,0,0,0.1)';
+                    stripContext.shadowBlur = 10;
+                    stripContext.shadowOffsetY = 5;
+                    
+                    // Draw image with border
+                    const borderSize = 10;
+                    stripContext.fillStyle = '#f3f4f6';
+                    stripContext.fillRect(
+                        borderSize, 
+                        photoHeightWithText * index + borderSize, 
+                        canvas.width - borderSize * 2, 
+                        canvas.height - borderSize * 2
+                    );
+                    
+                    stripContext.drawImage(
+                        img, 
+                        borderSize, 
+                        photoHeightWithText * index + borderSize, 
+                        canvas.width - borderSize * 2, 
+                        canvas.height - borderSize * 2
+                    );
+                    
+                    // Reset shadow
+                    stripContext.shadowColor = 'transparent';
+                    
+                    // Draw caption
+                    stripContext.font = '20px "Inter", sans-serif';
+                    stripContext.fillStyle = '#4b5563';
+                    stripContext.textAlign = 'center';
+                    
+                    const captionY = photoHeightWithText * index + canvas.height + 30;
+                    const dateY = captionY + 30;
+                    
+                    stripContext.fillText(photo.caption || 'Your Caption Here', canvas.width / 2, captionY);
+                    
+                    // Draw date
+                    stripContext.font = '16px "Inter", sans-serif';
+                    stripContext.fillStyle = '#9ca3af';
+                    stripContext.fillText(photo.date, canvas.width / 2, dateY);
+                };
+            });
+            
+            // Auto-scroll to bottom
+            const stripContainer = document.querySelector('.photo-strip-container');
+            stripContainer.scrollTop = stripContainer.scrollHeight;
+            
+            // Show notification
+            showNotification('Photo added to your strip!');
+        }
+
+        // Download Photo Strip
+        downloadBtn.addEventListener('click', () => {
+            const stripURL = photoStrip.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = stripURL;
+            link.download = `memorysnap_${new Date().toISOString().slice(0, 10)}.png`;
+            link.click();
+            
+            // Play success sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3');
+            audio.volume = 0.3;
+            audio.play();
+            
+            // Show notification
+            showNotification('Photo strip downloaded!');
+        });
+
+        // Reset Photo Strip
+        resetBtn.addEventListener('click', () => {
+            photos = [];
+            stripContext.clearRect(0, 0, photoStrip.width, photoStrip.height);
+            downloadBtn.style.display = 'none';
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-close-erase-1178.mp3');
+            audio.volume = 0.3;
+            audio.play();
+            
+            // Show notification
+            showNotification('Photo strip cleared!');
+        });
+
+        // Filter Function
+        function getFilterStyle(filter) {
+            switch (filter) {
+                case 'high-contrast': return 'contrast(200%) brightness(0.8)';
+                case 'sepia': return 'sepia(100%)';
+                case 'invert': return 'invert(100%)';
+                default: return filter === 'none' ? 'none' : 'grayscale(100%)';
+            }
+        }
+
+        // Close Camera
+        closeCameraBtn.addEventListener('click', () => {
+            // Clear any ongoing countdown
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            const stream = videoElement.srcObject;
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+            }
+            
+            videoElement.srcObject = null;
+            cameraContainer.style.display = 'none';
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-close-erase-1178.mp3');
+            audio.volume = 0.3;
+            audio.play();
+        });
+
+        // Notification function
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed bottom-6 right-6 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center animate-fade-in';
+            notification.innerHTML = `
+                <i class="fas fa-check-circle text-gray-300 mr-2"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('animate-fade-out');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .animate-fade-in {
+                animation: fadeIn 0.3s ease-out forwards;
+            }
+            
+            .animate-fade-out {
+                animation: fadeOut 0.3s ease-out forwards;
+            }
+            
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            @keyframes fadeOut {
+                from {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
